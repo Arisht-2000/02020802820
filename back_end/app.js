@@ -1,66 +1,123 @@
 const express = require('express');
-const uuidv4 = require("uuid/v4");
-const jwt = require('jsonwebtoken');
 const app = express();
-const PORT = 3000;
+const PORT = 9000;
 
 app.use(express.json());
-app.post('/train/register', (req, res)=>{
-    var companyName = res.body.companyName
-    var ownerName = res.body.ownerName
-    var rollNo = res.body.rollNo
-    var ownerEmail = res.body.ownerEmail
-    var accessCode = res.body.accessCode
-    var clientId = uuidv4()
-    var clientSecret = uuidv4()
-    var sql = 'INSERT INTO users (companyName, ownerName, rollNo, ownerEmail,accessCode,clientId,clientSecret) VALUES ("${companyName}","${ownerName}","${rollNo}","${ownerEmail}","${accessCode}","${clientId}","${clientSecret}")'
-    db.query(sql, function (err, result) {
-        if (err) throw err
-        console.log('Row has been updated')
-        req.json({ companyName: "${companyName}", clientId: "${clientId}", clientSecret: "${clientSecret}"})
-      })
-});
 
-app.post('/train/auth', (req, res)=>{
-    var companyName = res.body.companyName
-    var clientId = res.body.clientId
-    var ownerName = res.body.ownerName
-    var ownerEmail = res.body.ownerEmail
-    var rollNo = res.body.rollNo
-    var clientSecret = res.body.clientSecret
+var details = {
+	"companyName": "Bhagwan Parshuram Institute of Technology",
+	"clientID":"ffa685d2-b70d-4fdd-8444-0b20582e29ee",
+	"ownerName": "Arisht Mehta Jain",
+	"ownerEmail": "arishtjain2000@gmail.com",
+	"rollNo": "02020802820",
+	"clientSecret":"RjeBcwALIUsAavSz"
+};
+var token = {
+	"token_type": "Bearer",
+	"access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2OTA1NDMwNTksImNvbXBhbnlOYW1lIjoiQmhhZ3dhbiBQYXJzaHVyYW0gSW5zdGl0dXRlIG9mIFRlY2hub2xvZ3kiLCJjbGllbnRJRCI6ImZmYTY4NWQyLWI3MGQtNGZkZC04NDQ0LTBiMjA1ODJlMjllZSIsIm93bmVyTmFtZSI6IiIsIm93bmVyRW1haWwiOiIiLCJyb2xsTm8iOiIwMjAyMDgwMjgyMCJ9.xrCQNBQvqXrtboHk3UcQCL8tIpeO4kKoVLVGdPdhJuo",
+	"expires_in": 1690543059
+};
 
-    var sql = 'SELECT (companyName,ownerName,ownerEmail,rollNo,clientSecret) FROM users WHERE clientId = "${clientId}"'
-    a = db.query(sql,function (err, result) {
-        if (err) throw err})
-    if (a.companyName == companyName && a.clientSecret == clientSecret){
-        var token = jwt.sign(clientId, clientSecret, { expiresIn: '1682629264s' });
-        res.json(token);}
-});
+var ApiAccess = token.access_token;
 
-const jwt = require('jsonwebtoken');
-
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization']
-  const token = authHeader && authHeader.split(' ')[1]
-
-  if (token == null) return res.sendStatus(401)
-
-  jwt.verify(token, clientSecret, (err, user) => {
-    console.log(err)
-
-    if (err) return res.sendStatus(403)
-
-    req.user = user
-
-    next()
-  })
+var request = require('request');
+function updateToken(details){
+    var clientServerOptions = {
+        uri: 'http://20.244.56.144/train/auth',
+            body: JSON.stringify(details),
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }
+    request(clientServerOptions, function (error, response) {
+        console.log(error,response.body);
+        token = response.body;
+        ApiAccess = token.access_token;
+        return (token,ApiAccess);
+    });
 }
 
-app.get('/train/trains', authenticateToken, (req, res) => {
-    // executes after authenticateToken
-    // ...
-  })
+function getTrainsList(ApiAccess){
+    var clientServerOptions = {
+        uri: 'http://20.244.56.144/train/trains',
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorisation-token': ApiAccess
+            }
+        }
+    request(clientServerOptions, function (error, response) {
+        console.log(error,response.body);
+        return (JSON.parse(response.body));
+    });
+}
 
+function getTrainData(ApiAccess,TrainNumer){
+    var clientServerOptions = {
+        uri: 'http://20.244.56.144/train/trains/'+ TrainNumer,
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorisation-token': ApiAccess
+            }
+        }
+    request(clientServerOptions, function (error, response) {
+        console.log(error,response.body);
+        return (response.body);
+    });
+}
+
+function DepartTimeCalc(DepartTime,delay){
+    time = DepartTime;
+    time.Minutes = (DepartTime.Minutes + delay) % 60;
+    time.Hours = (DepartTime.Minutes + delay) / 60;
+    return time
+}
+
+function compareByDeparture(a, b) {
+    if ((a.DepartTime.Hours*60*60+a.DepartTime.Minutes*60+a.DepartTime.Seconds) < (b.DepartTime.Hours*60*60+b.DepartTime.Minutes*60+b.DepartTime.Seconds)) {
+      return 1;
+    }
+    if ((a.DepartTime.Hours*60*60+a.DepartTime.Minutes*60+a.DepartTime.Seconds) > (b.DepartTime.Hours*60*60+b.DepartTime.Minutes*60+b.DepartTime.Seconds)) {
+      return -1;
+    }
+    return 0;
+}
+function compareByTics(a, b) {
+    if ((a.seatsAvailable.sleeper+a.seatsAvailable.AC) < (b.seatsAvailable.sleeper+b.seatsAvailable.AC)) {
+      return 1;
+    }
+    if ((a.seatsAvailable.sleeper+a.seatsAvailable.AC) > (b.seatsAvailable.sleeper+b.seatsAvailable.AC)) {
+      return -1;
+    }
+    return 0;
+}
+function compareByPrice(a, b) {
+    if ((a.price.sleeper+a.price.AC) < (b.price.sleeper+b.price.AC)) {
+      return -1;
+    }
+    if ((a.price.sleeper+a.price.AC) > (b.price.sleeper+b.price.AC)) {
+      return 1;
+    }
+    return 0;
+}
+
+app.get('/trains', (req, res)=>{
+    jsonObjectArray = getTrainsList(token)
+    jsonObjectArray.forEach(element => {
+        element.DepartTime = DepartTimeCalc(element.DepartTime,element.delayedBy)
+    });
+    jsonObjectArray.sort(compareByDeparture);jsonObjectArray.sort(compareByTics);jsonObjectArray.sort(compareByPrice);
+    res.json(a);
+});
+
+app.get('/trains/${TrainNumer', (req, res)=>{
+    jsonObject = getTrainData(token,req.TrainNumer)
+    jsonObject.DepartTime = DepartTimeCalc(jsonObject.DepartTime,jsonObject.delayedBy)
+    res.json(a);
+});
+  
 app.listen(PORT, (error) =>{
     if(!error)
         console.log("Server is Successfully Running, and App is listening on port "+ PORT)
