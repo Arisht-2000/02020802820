@@ -1,0 +1,15 @@
+{
+  "name": "back_end",
+  "version": "1.0.0",
+  "description": "This is the backend for train_schedule_system",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Arisht-2000",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "uuid": "^9.0.0"
+  }
+}
