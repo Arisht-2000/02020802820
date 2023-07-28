@@ -103,6 +103,11 @@ function compareByPrice(a, b) {
     return 0;
 }
 
+app.get('/', (req, res)=>{
+    (token,ApiAccess) = updateToken(details)
+    res.json(ApiAccess)
+});
+
 app.get('/trains', (req, res)=>{
     jsonObjectArray = getTrainsList(token)
     jsonObjectArray.forEach(element => {
