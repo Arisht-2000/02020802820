@@ -11,8 +11,8 @@ function App() {
 		<Router>
 			<Navbar />
 			<Routes>
-				<Route path='/' element={<AllTrainWell />} />
-				<Route path='/train/?s=' element={<TrainData TrainNumber = {s}/>} />
+				<Route exact path='/' element={<AllTrainWell />} />
+				<Route exact path='/train/:trainnum' element={<TrainData />} />
 			</Routes>
 		</Router>
 	);
